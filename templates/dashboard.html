@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Live Log Monitor</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: 'Segoe UI', Consolas, monospace;
+    margin: 0;
+    padding: 24px;
+  }
+  h1 { color: #58a6ff; margin-bottom: 4px; }
+  .subtitle { color: #8b949e; margin-bottom: 24px; }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-value { font-size: 28px; font-weight: bold; color: #58a6ff; }
+  .stat-label { font-size: 12px; color: #8b949e; margin-top: 4px; }
+  .stat-card.errors .stat-value { color: #f85149; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid #21262d;
+    font-size: 13px;
+  }
+  th { color: #8b949e; font-weight: normal; }
+  tr.error-row { background: rgba(248, 81, 73, 0.08); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    margin-right: 4px;
+  }
+  .badge.ip { background: #1f6feb33; color: #58a6ff; }
+  .badge.email { background: #23863633; color: #3fb950; }
+  .timestamp { color: #8b949e; }
+  .live-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: #3fb950;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+  <h1><span class="live-dot"></span>Live Log Monitor</h1>
+  <div class="subtitle">Real-time log parsing dashboard — auto-refreshes every 2s</div>
+
+  <div class="stats" id="stats">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-lines">0</div>
+      <div class="stat-label">LINES PROCESSED</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-ips">0</div>
+      <div class="stat-label">IPs FOUND</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-emails">0</div>
+      <div class="stat-label">EMAILS FOUND</div>
+    </div>
+    <div class="stat-card errors">
+      <div class="stat-value" id="stat-errors">0</div>
+      <div class="stat-label">ERRORS/DENIED</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Log Line</th><th>Extracted</th></tr>
+    </thead>
+    <tbody id="log-body"></tbody>
+  </table>
+
+<script>
+async function refresh() {
+  try {
+    const res = await fetch('/api/logs');
+    const data = await res.json();
+
+    document.getElementById('stat-lines').textContent = data.stats.total_lines;
+    document.getElementById('stat-ips').textContent = data.stats.total_ips;
+    document.getElementById('stat-emails').textContent = data.stats.total_emails;
+    document.getElementById('stat-errors').textContent = data.stats.total_errors;
+
+    const body = document.getElementById('log-body');
+    body.innerHTML = '';
+    data.logs.forEach(entry => {
+      const tr = document.createElement('tr');
+      if (entry.is_error) tr.className = 'error-row';
+
+      const badges = [
+        ...entry.ips.map(ip => `<span class="badge ip">${ip}</span>`),
+        ...entry.emails.map(em => `<span class="badge email">${em}</span>`)
+      ].join('');
+
+      tr.innerHTML = `
+        <td class="timestamp">${entry.timestamp}</td>
+        <td>${entry.raw}</td>
+        <td>${badges || '-'}</td>
+      `;
+      body.appendChild(tr);
+    });
+  } catch (e) {
+    console.error('Failed to refresh logs', e);
+  }
+}
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>
