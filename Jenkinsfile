@@ -7,6 +7,11 @@ pipeline {
     stage('Run') {
       steps { sh 'docker run -d -p 5000:5000 --name test-container log-dashboard:1.0' }
     }
+
+    stage ('wait'){
+        steps { sh 'sleep 10' }
+    }
+
     stage('Verify') {
       steps { sh 'curl --fail http://localhost:5000/health' }
     }
