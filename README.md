@@ -1,6 +1,6 @@
 # 📊 Live Log Monitoring Dashboard
 
-A real-time log monitoring dashboard built with **Python (Flask)** that simulates live server logs, extracts useful information using **Regular Expressions (Regex)**, and displays statistics through a responsive web dashboard. The project is containerized with **Docker** and includes a **GitHub Actions CI** workflow for automated builds and health checks.
+A real-time log monitoring dashboard built with **Python (Flask)** that simulates live server logs, extracts useful information using **Regular Expressions (Regex)**, and displays statistics through a responsive web dashboard with light/dark mode. The project is containerized with **Docker**, deployed through a **Jenkins CI/CD pipeline**, and includes a **GitHub Actions** workflow for automated builds and health checks. Critical events trigger real-time alerts via **AWS SNS**.
 
 ---
 
@@ -11,9 +11,11 @@ A real-time log monitoring dashboard built with **Python (Flask)** that simulate
   - IP Addresses
   - Email Addresses
   - Error Events
-- 📊 Real-time dashboard
+- 📊 Real-time dashboard with light/dark mode toggle
+- 🔔 Real-time critical event alerts via AWS SNS
 - 🌐 REST API for log data
 - 🐳 Docker support
+- ⚙️ Jenkins CI/CD pipeline
 - ⚙️ GitHub Actions Continuous Integration
 - ❤️ Health Check endpoint
 
@@ -23,12 +25,12 @@ A real-time log monitoring dashboard built with **Python (Flask)** that simulate
 
 - Python 3
 - Flask
-- HTML
-- CSS
-- JavaScript
+- HTML / CSS / JavaScript
 - Regular Expressions (Regex)
 - Docker
+- Jenkins
 - GitHub Actions
+- AWS SNS (boto3)
 
 ---
 
@@ -39,9 +41,9 @@ A real-time log monitoring dashboard built with **Python (Flask)** that simulate
 ├── app.py
 ├── templates/
 │   └── dashboard.html
-├── static/
 ├── requirements.txt
 ├── Dockerfile
+├── Jenkinsfile
 ├── .github/
 │   └── workflows/
 └── README.md
@@ -53,45 +55,42 @@ A real-time log monitoring dashboard built with **Python (Flask)** that simulate
 
 ### Clone the Repository
 
-```bash
-git clone https://github.com/<your-username>/<repository-name>.git
-cd <repository-name>
+```
+git clone https://github.com/Yash-Sonii/log-dashboard.git
+cd log-dashboard
 ```
 
 ### Create Virtual Environment
 
-```bash
+```
 python -m venv venv
 ```
 
 ### Activate Environment
 
 Linux / macOS
-
-```bash
+```
 source venv/bin/activate
 ```
 
 Windows
-
-```bash
+```
 venv\Scripts\activate
 ```
 
 ### Install Dependencies
 
-```bash
+```
 pip install -r requirements.txt
 ```
 
 ### Run the Application
 
-```bash
+```
 python app.py
 ```
 
 Open your browser:
-
 ```
 http://localhost:5000
 ```
@@ -100,27 +99,37 @@ http://localhost:5000
 
 ## 🐳 Run with Docker
 
-Build the Docker image
-
-```bash
-docker build -t log-dashboard .
 ```
-
-Run the container
-
-```bash
+docker build -t log-dashboard .
 docker run -p 5000:5000 log-dashboard
 ```
 
 ---
 
+## ⚙️ CI/CD Pipeline
+
+**GitHub Actions** builds the Docker image, runs the container, and hits `/health` on every push to `main`.
+
+**Jenkins** runs a full pipeline (Checkout → Build → Run → Wait → Verify → Cleanup) against a local Jenkins server. Two real issues encountered and fixed while wiring this up:
+
+- **Docker permission denied**: the `jenkins` system user wasn't part of the `docker` group, blocking access to `docker.sock`. Fixed with `usermod -aG docker jenkins` and a Jenkins service restart.
+- **Health check failing right after container start**: the container needed a moment to bind the port before `curl /health` would succeed. Fixed by adding a short wait stage between the run and verify steps.
+
+---
+
+## 🔔 Real-Time Alerts (AWS SNS)
+
+When the regex parser detects a critical event (`ERROR`, `FAILED`, `DENIED`, `CRITICAL`), the app publishes a message to an AWS SNS topic, which sends a real-time email alert — with a cooldown to avoid alert spam.
+
+---
+
 ## 🔗 API Endpoints
 
-| Endpoint | Description |
-|----------|-------------|
-| `/` | Dashboard |
-| `/api/logs` | Returns log data and statistics |
-| `/health` | Health check endpoint |
+| Endpoint    | Description                     |
+| ----------- | -------------------------------- |
+| `/`         | Dashboard                        |
+| `/api/logs` | Returns log data and statistics  |
+| `/health`   | Health check endpoint            |
 
 ---
 
@@ -131,7 +140,9 @@ docker run -p 5000:5000 log-dashboard
 - Regular Expressions (Regex)
 - Multi-threading
 - Docker Containerization
+- Jenkins CI/CD Pipeline (with real debugging: permissions, timing issues)
 - GitHub Actions CI
+- AWS SNS Integration (boto3)
 - DevOps Fundamentals
 
 ---
@@ -140,7 +151,6 @@ docker run -p 5000:5000 log-dashboard
 
 - Database integration (SQLite/PostgreSQL)
 - Kubernetes deployment
-- Jenkins pipeline
 - Authentication
 - Real log ingestion
 - Log filtering and search
