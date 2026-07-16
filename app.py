@@ -3,10 +3,18 @@ import re
 import threading
 import time
 import random
+import os
+import boto3
 from collections import deque
 from datetime import datetime
 
 app = Flask(__name__)
+
+sns_client = boto3.client("sns")
+SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN")
+
+_last_alert_time = 0
+ALERT_COOLDOWN_SECONDS = 30
 
 LOG_BUFFER = deque(maxlen=50)
 STATS = {"total_lines": 0, "total_ips": 0, "total_emails": 0, "total_errors": 0}
@@ -38,8 +46,37 @@ def parse_line(line: str) -> dict:
     }
     with LOCK:
         LOG_BUFFER.appendleft(entry)
+
+    if is_error:
+        maybe_send_alert(entry)
+
     return entry
 
+
+def maybe_send_alert(entry):
+    global _last_alert_time
+    now = time.time()
+    if now - _last_alert_time < ALERT_COOLDOWN_SECONDS:
+        return
+    if not SNS_TOPIC_ARN:
+        print("SNS_TOPIC_ARN not set, skipping alert")
+        return
+
+    _last_alert_time = now
+    try:
+        sns_client.publish(
+            TopicArn=SNS_TOPIC_ARN,
+            Subject="Log Dashboard Alert",
+            Message=(
+                f"Critical event detected at {entry['timestamp']} UTC\n\n"
+                f"Log line: {entry['raw']}\n"
+                f"IPs: {', '.join(entry['ips']) or 'none'}\n"
+                f"Emails: {', '.join(entry['emails']) or 'none'}"
+            ),
+        )
+        print(f"SNS alert sent for: {entry['raw']}")
+    except Exception as e:
+        print(f"SNS publish failed: {e}")
 
 SAMPLE_EVENTS = [
     "User login from {ip} succeeded",
