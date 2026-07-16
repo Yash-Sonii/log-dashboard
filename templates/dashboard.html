@@ -5,15 +5,71 @@
 <title>Live Log Monitor</title>
 <style>
   * { box-sizing: border-box; }
+
+  :root {
+    --bg: #0d1117;
+    --text: #c9d1d9;
+    --subtitle: #8b949e;
+    --heading: #58a6ff;
+    --card-bg: #161b22;
+    --card-border: #30363d;
+    --error: #f85149;
+    --row-border: #21262d;
+    --error-row-bg: rgba(248, 81, 73, 0.08);
+    --badge-ip-bg: #1f6feb33;
+    --badge-ip-text: #58a6ff;
+    --badge-email-bg: #23863633;
+    --badge-email-text: #3fb950;
+    --live-dot: #3fb950;
+  }
+
+  [data-theme="light"] {
+    --bg: #f6f8fa;
+    --text: #24292f;
+    --subtitle: #57606a;
+    --heading: #0969da;
+    --card-bg: #ffffff;
+    --card-border: #d0d7de;
+    --error: #cf222e;
+    --row-border: #eaeef2;
+    --error-row-bg: rgba(207, 34, 46, 0.06);
+    --badge-ip-bg: #ddf4ff;
+    --badge-ip-text: #0969da;
+    --badge-email-bg: #dafbe1;
+    --badge-email-text: #1a7f37;
+    --live-dot: #1a7f37;
+  }
+
   body {
-    background: #0d1117;
-    color: #c9d1d9;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'Segoe UI', Consolas, monospace;
     margin: 0;
     padding: 24px;
+    transition: background 0.2s ease, color 0.2s ease;
   }
-  h1 { color: #58a6ff; margin-bottom: 4px; }
-  .subtitle { color: #8b949e; margin-bottom: 24px; }
+
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  h1 { color: var(--heading); margin-bottom: 4px; }
+  .subtitle { color: var(--subtitle); margin-bottom: 24px; }
+
+  #theme-toggle {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  #theme-toggle:hover { border-color: var(--heading); }
+
   .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -21,24 +77,24 @@
     margin-bottom: 24px;
   }
   .stat-card {
-    background: #161b22;
-    border: 1px solid #30363d;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 8px;
     padding: 16px;
     text-align: center;
   }
-  .stat-value { font-size: 28px; font-weight: bold; color: #58a6ff; }
-  .stat-label { font-size: 12px; color: #8b949e; margin-top: 4px; }
-  .stat-card.errors .stat-value { color: #f85149; }
+  .stat-value { font-size: 28px; font-weight: bold; color: var(--heading); }
+  .stat-label { font-size: 12px; color: var(--subtitle); margin-top: 4px; }
+  .stat-card.errors .stat-value { color: var(--error); }
   table { width: 100%; border-collapse: collapse; }
   th, td {
     text-align: left;
     padding: 8px 12px;
-    border-bottom: 1px solid #21262d;
+    border-bottom: 1px solid var(--row-border);
     font-size: 13px;
   }
-  th { color: #8b949e; font-weight: normal; }
-  tr.error-row { background: rgba(248, 81, 73, 0.08); }
+  th { color: var(--subtitle); font-weight: normal; }
+  tr.error-row { background: var(--error-row-bg); }
   .badge {
     display: inline-block;
     padding: 2px 8px;
@@ -46,13 +102,13 @@
     font-size: 11px;
     margin-right: 4px;
   }
-  .badge.ip { background: #1f6feb33; color: #58a6ff; }
-  .badge.email { background: #23863633; color: #3fb950; }
-  .timestamp { color: #8b949e; }
+  .badge.ip { background: var(--badge-ip-bg); color: var(--badge-ip-text); }
+  .badge.email { background: var(--badge-email-bg); color: var(--badge-email-text); }
+  .timestamp { color: var(--subtitle); }
   .live-dot {
     display: inline-block;
     width: 8px; height: 8px;
-    background: #3fb950;
+    background: var(--live-dot);
     border-radius: 50%;
     margin-right: 6px;
     animation: pulse 1.5s infinite;
@@ -63,8 +119,13 @@
 </style>
 </head>
 <body>
-  <h1><span class="live-dot"></span>Live Log Monitor</h1>
-  <div class="subtitle">Real-time log parsing dashboard — auto-refreshes every 2s</div>
+  <div class="top-bar">
+    <div>
+      <h1><span class="live-dot"></span>Live Log Monitor</h1>
+      <div class="subtitle">Real-time log parsing dashboard — auto-refreshes every 2s</div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+  </div>
 
   <div class="stats" id="stats">
     <div class="stat-card">
@@ -93,6 +154,20 @@
   </table>
 
 <script>
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('theme-toggle').textContent = theme === 'light' ? '☀️ Light' : '🌙 Dark';
+  localStorage.setItem('theme', theme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  applyTheme(current === 'light' ? 'dark' : 'light');
+}
+
+// Load saved preference (defaults to dark)
+applyTheme(localStorage.getItem('theme') || 'dark');
+
 async function refresh() {
   try {
     const res = await fetch('/api/logs');

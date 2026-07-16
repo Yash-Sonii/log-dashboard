@@ -58,7 +58,7 @@ def random_ip():
 
 
 def random_email():
-    users = ["alice", "bob", "admin", "priya", "yash", "system"]
+    users = ["yashvi", "krishna", "arjun", "niharika", "yashsoni"]
     domains = ["company.com", "gmail.com", "corp.io"]
     return f"{random.choice(users)}@{random.choice(domains)}"
 
