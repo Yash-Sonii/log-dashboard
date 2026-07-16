@@ -10,7 +10,12 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-sns_client = boto3.client("sns")
+try:
+    sns_client = boto3.client("sns", region_name=os.environ.get("AWS_DEFAULT_REGION", "ap-south-1"))
+except Exception as e:
+    print(f"SNS client init failed (this is fine if AWS isn't configured): {e}")
+    sns_client = None
+
 SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN")
 
 _last_alert_time = 0
@@ -55,6 +60,10 @@ def parse_line(line: str) -> dict:
 
 def maybe_send_alert(entry):
     global _last_alert_time
+
+    if sns_client is None or not SNS_TOPIC_ARN:
+        return
+
     now = time.time()
     if now - _last_alert_time < ALERT_COOLDOWN_SECONDS:
         return
